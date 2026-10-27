@@ -1,1 +1,1 @@
-# CSE325-Sevems
+# CSE325-Sevens
