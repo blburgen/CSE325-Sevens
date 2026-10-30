@@ -9,6 +9,8 @@ This project implements .NET applications with C#
 ### Team Members
 
 - Brady Burgener
+- Carson Landvatter
+- Kelsey Hansel
 - Te Ara Rachel Erueti
 
 # Development Environment
