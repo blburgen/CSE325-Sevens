@@ -2,6 +2,7 @@ using Sevens.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 // to allow deploy on vercel
+// comment out these two lines to test out locally
 var port = Environment.GetEnvironmentVariable("PORT") ?? "80";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
@@ -11,9 +12,8 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 // to allow deploy on vercel
-app.MapGet("/", () => Results.Json(new { message = "Hello from .NET on Vercel" }));
-app.MapGet("/health", () => Results.Json(new { status = "ok" }));
-app.Run();
+// app.MapGet("/", () => Results.Json(new { message = "Hello from .NET on Vercel" }));
+// app.MapGet("/health", () => Results.Json(new { status = "ok" }));
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
