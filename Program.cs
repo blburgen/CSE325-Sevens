@@ -5,7 +5,9 @@ using AspNet.Security.OAuth.GitHub;
 
 var builder = WebApplication.CreateBuilder(args);
 // to allow deploy on vercel
-var port = Environment.GetEnvironmentVariable("PORT") ?? "80";
+// comment out these two lines to test out locally
+// Listen on the port Render provides (falls back to 8080 for local runs).
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Add services to the container.
@@ -32,9 +34,8 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 // to allow deploy on vercel
-app.MapGet("/", () => Results.Json(new { message = "Hello from .NET on Vercel" }));
-app.MapGet("/health", () => Results.Json(new { status = "ok" }));
-app.Run();
+// app.MapGet("/", () => Results.Json(new { message = "Hello from .NET on Vercel" }));
+// app.MapGet("/health", () => Results.Json(new { status = "ok" }));
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
