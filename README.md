@@ -16,7 +16,13 @@ This project implements .NET applications with C#
 # Development Environment
 
 - C#
+- dotnet
 - Visual Studio Code
+
+# deploy locally
+
+dotnet run or dotnet watch run
+then open http://localhost:8080/
 
 # Useful Websites
 

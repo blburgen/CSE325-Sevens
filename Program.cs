@@ -2,7 +2,6 @@ using Sevens.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 // to allow deploy on vercel
-// comment out these two lines to test out locally
 // Listen on the port Render provides (falls back to 8080 for local runs).
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
