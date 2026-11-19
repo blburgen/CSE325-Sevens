@@ -4,20 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using CSE325_Sevens.Components;
 using CSE325_Sevens.Components.Account;
 using CSE325_Sevens.Data;
+using Npgsql;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
-// to allow deploy on vercel
-// Listen on the port Render provides (falls back to 8080 for local runs).
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Add services to the container.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped(typeof(IdentityRedirectManager));
+builder.Services.AddScoped(typeof(AuthenticationStateProvider), typeof(IdentityRevalidatingAuthenticationStateProvider));
 
 builder.Services.AddAuthentication(options =>
     {
@@ -26,9 +29,26 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+static string CleanEnv(string key) =>
+    (Environment.GetEnvironmentVariable(key) ?? "").Replace("\\n", "").Replace("\n", "").Trim();
+
+var pgHost = CleanEnv("PGHOST");
+var connectionString = !string.IsNullOrEmpty(pgHost)
+    ? new NpgsqlConnectionStringBuilder
+      {
+          Host = pgHost,
+          Database = CleanEnv("PGDATABASE"),
+          Username = CleanEnv("PGUSER"),
+          Password = CleanEnv("PGPASSWORD"),
+          SslMode = SslMode.Require
+      }.ConnectionString
+    : builder.Configuration.GetConnectionString("DefaultConnection")
+      ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseNpgsql(connectionString));
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<ApplicationDbContext>();
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -44,7 +64,6 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -52,17 +71,18 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 
 app.MapStaticAssets();
+app.UseAntiforgery();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();

@@ -9,4 +9,5 @@ RUN dotnet publish CSE325-Sevens.csproj -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "CSE325-Sevens.dll"]
