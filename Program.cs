@@ -29,19 +29,25 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
+    });
+
 static string CleanEnv(string key) =>
     (Environment.GetEnvironmentVariable(key) ?? "").Replace("\\n", "").Replace("\n", "").Trim();
 
 var pgHost = CleanEnv("PGHOST");
 var connectionString = !string.IsNullOrEmpty(pgHost)
     ? new NpgsqlConnectionStringBuilder
-      {
-          Host = pgHost,
-          Database = CleanEnv("PGDATABASE"),
-          Username = CleanEnv("PGUSER"),
-          Password = CleanEnv("PGPASSWORD"),
-          SslMode = SslMode.Require
-      }.ConnectionString
+    {
+        Host = pgHost,
+        Database = CleanEnv("PGDATABASE"),
+        Username = CleanEnv("PGUSER"),
+        Password = CleanEnv("PGPASSWORD"),
+        SslMode = SslMode.Require
+    }.ConnectionString
     : builder.Configuration.GetConnectionString("DefaultConnection")
       ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
