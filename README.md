@@ -22,7 +22,7 @@ This project implements .NET applications with C#
 # deploy locally
 
 dotnet run or dotnet watch run
-then open http://localhost:{port indicated in terminal}/
+then open `http://localhost:{port indicated in terminal}/`
 
 # Useful Websites
 
