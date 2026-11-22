@@ -1,13 +1,53 @@
 ﻿@page "/auth"
 
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using CSE325_Sevens.Data
 
 @attribute [Authorize]
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
 
 <PageTitle>Auth</PageTitle>
 
 <h1>You are authenticated</h1>
 
 <AuthorizeView>
-    Hello @context.User.Identity?.Name!
+    <p>Hello @context.User.Identity?.Name!</p>
 </AuthorizeView>
+
+@if (!string.IsNullOrWhiteSpace(favoriteItems))
+{
+    <p><strong>Favorite Items:</strong> @favoriteItems</p>
+}
+else
+{
+    <p><em>No favorite items saved yet.</em></p>
+}
+
+@code {
+    private string? favoriteItems;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationStateTask is not null)
+        {
+            var authState = await AuthenticationStateTask;
+            var user = await UserManager.GetUserAsync(authState.User);
+
+            if (user is not null)
+            {
+                var userLike = await DbContext.UserLikes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(l => l.UserId == user.Id);
+
+                favoriteItems = userLike?.TextBoxContent;
+            }
+        }
+    }
+}
