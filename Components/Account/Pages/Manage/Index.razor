@@ -2,11 +2,13 @@
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using CSE325_Sevens.Data
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
+@inject ApplicationDbContext DbContext
 
 <PageTitle>Profile</PageTitle>
 
@@ -21,13 +23,21 @@
                 <ValidationSummary class="text-danger" />
             </div>
             <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="Choose your username." disabled />
+                <input type="text" value="@username" id="username" class="form-control"
+                       placeholder="Choose your username." disabled />
                 <label for="username" class="form-label">Username</label>
             </div>
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" />
+                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control"
+                           placeholder="Enter your phone number" />
                 <label for="Input.PhoneNumber" class="form-label">Phone number</label>
                 <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.FavoriteItems" id="Input.FavoriteItems" class="form-control"
+                           placeholder="Enter your favorite items" />
+                <label for="Input.FavoriteItems" class="form-label">Favorite Items</label>
+                <ValidationMessage For="() => Input.FavoriteItems" class="text-danger" />
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
         </EditForm>
@@ -39,6 +49,7 @@
     private ApplicationUser? user;
     private string? username;
     private string? phoneNumber;
+    private string? favoriteItems;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -65,7 +76,12 @@
         username = await UserManager.GetUserNameAsync(user);
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
 
+        var userLike = await DbContext.UserLikes
+            .FirstOrDefaultAsync(l => l.UserId == user.Id);
+        favoriteItems = userLike?.TextBoxContent;
+
         Input.PhoneNumber ??= phoneNumber;
+        Input.FavoriteItems ??= favoriteItems;
     }
 
     private async Task OnValidSubmitAsync()
@@ -87,6 +103,27 @@
             }
         }
 
+        if (Input.FavoriteItems != favoriteItems)
+        {
+            var userLike = await DbContext.UserLikes
+                .FirstOrDefaultAsync(l => l.UserId == user.Id);
+
+            if (userLike is null)
+            {
+                DbContext.UserLikes.Add(new UserLike
+                {
+                    UserId = user.Id,
+                    TextBoxContent = Input.FavoriteItems
+                });
+            }
+            else
+            {
+                userLike.TextBoxContent = Input.FavoriteItems;
+            }
+
+            await DbContext.SaveChangesAsync();
+        }
+
         await SignInManager.RefreshSignInAsync(user);
         IdentityStatusMessage = "Your profile has been updated";
         RedirectManager.RedirectToCurrentPage();
@@ -94,8 +131,11 @@
 
     private sealed class InputModel
     {
-        [Phone]
+        [RegularExpression(@"^$|^\+?[0-9\s\-\(\)]{7,20}$", ErrorMessage = "The Phone number field is not a valid phone number.")]
         [Display(Name = "Phone number")]
         public string? PhoneNumber { get; set; }
+
+        [Display(Name = "Favorite Items")]
+        public string? FavoriteItems { get; set; }
     }
 }
