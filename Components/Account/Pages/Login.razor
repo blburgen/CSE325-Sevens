@@ -3,6 +3,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using CSE325_Sevens.Data
 
 @inject UserManager<ApplicationUser> UserManager
@@ -96,8 +97,10 @@
         }
 
         // Look up the user by their email address so we can get their truncated UserName
-        var user = await UserManager.FindByEmailAsync(Input.Email);
-        if (user is null)
+        var user = await UserManager.Users.FirstOrDefaultAsync(u => u.NormalizedEmail ==
+UserManager.NormalizeEmail(Input.Email));
+
+        if (user?.UserName is null)
         {
             errorMessage = "Error: Invalid login attempt.";
             return;
