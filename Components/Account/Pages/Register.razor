@@ -91,12 +91,14 @@ error.Description))}";
         var userName = userNameTemp;
         int counter = 1;
 
+        // finds unused username based on email
         while (await UserManager.FindByNameAsync(userName) != null)
         {
             userName = $"{userNameTemp}{counter}";
             counter++;
         }
 
+        // sets up user
         await UserStore.SetUserNameAsync(user, userName, CancellationToken.None);
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
