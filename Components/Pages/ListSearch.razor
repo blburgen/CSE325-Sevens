@@ -1,18 +1,218 @@
-﻿@page "/ListSearch"
+@page "/ListSearch"
 @rendermode InteractiveServer
+
+@using CSE325_Sevens.Data
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext Db
 
 <PageTitle>List Search</PageTitle>
 
-<h1>List Search</h1>
+<h1>Search</h1>
 
-<h2 role="status">Pending</h2>
+<p>Find people and their wish lists.</p>
 
+<div class="mb-3">
+    <button class="btn @(activeTab == "People" ? "btn-primary" : "btn-outline-primary") me-2"
+            @onclick='() => SelectTab("People")'>
+        People
+    </button>
+
+    <button class="btn @(activeTab == "WishLists" ? "btn-primary" : "btn-outline-primary")"
+            @onclick='() => SelectTab("WishLists")'>
+        Wish Lists
+    </button>
+</div>
+
+@if (activeTab == "People")
+{
+    <h2>Find people</h2>
+
+    <p>Search for registered users.</p>
+
+    <form @onsubmit="SearchPeopleAsync" @onsubmit:preventDefault>
+        <div class="input-group mb-3">
+            <input class="form-control"
+                   type="search"
+                   placeholder="Enter a username..."
+                   @bind="searchTerm"
+                   @bind:event="oninput" />
+
+            <button class="btn btn-primary"
+                    type="submit"
+                    disabled="@isLoading">
+                @(isLoading ? "Searching..." : "Search")
+            </button>
+        </div>
+    </form>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger">@errorMessage</p>
+    }
+
+    @if (hasSearched && !isLoading && people.Count == 0
+        && string.IsNullOrEmpty(errorMessage))
+    {
+        <p>No matching users found.</p>
+    }
+
+    @if (people.Count > 0)
+    {
+        <h3>Search results</h3>
+
+        <p class="text-muted">
+            Select a member to continue to their wish list.
+        </p>
+
+        <div class="list-group mb-3">
+            @foreach (var person in people)
+            {
+                <button type="button"
+                        class="list-group-item list-group-item-action"
+                        @onclick="() => SelectPerson(person)">
+
+                    <strong>
+                        @person.UserName
+                    </strong>
+
+                    <span class="float-end text-primary">
+                        Select →
+                    </span>
+                </button>
+            }
+        </div>
+    }
+
+    @if (selectedPerson != null)
+    {
+        <div class="alert alert-info mt-3">
+            <strong>Member selected!</strong>
+
+            <p class="mb-0">
+                Wishlist navigation will be connected once the
+                Wishlist page and route are finalised with Kelsey.
+            </p>
+        </div>
+    }
+}
+else if (activeTab == "WishLists")
+{
+    <h2>Find wish lists</h2>
+
+    <p>Search for another user's wish list.</p>
+
+    <div class="input-group mb-3">
+        <input class="form-control"
+               type="search"
+               placeholder="Search wish lists..."
+               disabled />
+
+        <button class="btn btn-primary" disabled>
+            Search
+        </button>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Coming soon</strong>
+
+        <p class="mb-0">
+            Wish list searching will be connected once the
+            Wishlist model and page are ready.
+        </p>
+    </div>
+}
 
 @code {
-    private int currentCount = 0;
+    private string activeTab = "People";
+    private string searchTerm = string.Empty;
 
-    private void IncrementCount()
+    private bool isLoading;
+    private bool hasSearched;
+
+    private string errorMessage = string.Empty;
+
+    private List<PersonSearchResult> people = new();
+
+    private PersonSearchResult? selectedPerson;
+
+    private void SelectTab(string tab)
     {
-        currentCount++;
+        activeTab = tab;
+        errorMessage = string.Empty;
+        selectedPerson = null;
+    }
+
+    private void SelectPerson(PersonSearchResult person)
+    {
+        selectedPerson = person;
+
+        // TODO: Connect to Kelsey's Wishlist page
+        // using the selected person's Id once the route is confirmed.
+    }
+
+    
+    private async Task SearchPeopleAsync()
+    {
+        // Prevent multiple searches running simultaneously.
+        if (isLoading) return;
+
+        errorMessage = string.Empty;
+        people.Clear();
+        selectedPerson = null;
+        hasSearched = false;
+
+        string term = searchTerm.Trim();
+
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            errorMessage = "Please enter a username to search.";
+            return;
+        }
+
+        // Escape PostgreSQL pattern wildcard characters.
+        string escapedTerm = term
+            .Replace(@"\", @"\\")
+            .Replace("%", @"\%")
+            .Replace("_", @"\_");
+
+        isLoading = true;
+
+        try
+        {
+            people = await Db.Users
+                .AsNoTracking()
+                .Where(user =>
+                    user.UserName != null &&
+                    EF.Functions.ILike(
+                        user.UserName,
+                        $"%{escapedTerm}%",
+                        "\\"))
+                .OrderBy(user => user.UserName)
+                .Take(20)
+                .Select(user => new PersonSearchResult
+                {
+                    Id = user.Id,
+                    UserName = user.UserName ?? string.Empty
+                })
+                .ToListAsync();
+
+            hasSearched = true;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while searching. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+
+    private sealed class PersonSearchResult
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
     }
 }
